@@ -5,7 +5,6 @@ import markdownit from "markdown-it";
 import { notFound } from "next/navigation";
 
 import { formatDate } from "@/lib/utils";
-
 import {
   STARTUP_BY_ID_QUERY,
   PLAYLIST_BY_SLUG_QUERY,
@@ -21,15 +20,19 @@ export const experimental_ppr = true;
 
 async function Page({ params }: { params: Promise<{ id: string }> }) {
   const id = (await params).id;
+  console.log("idd", id);
 
-  const [post, { select: editorPosts }] = await Promise.all([
-    client.fetch(STARTUP_BY_ID_QUERY, {
-      id: id,
-    }),
-    client.fetch(PLAYLIST_BY_SLUG_QUERY, {
-      slug: "editor-picks",
-    }),
+  // Fetch data concurrently
+  const [post, playlistResult] = await Promise.all([
+    client.fetch(STARTUP_BY_ID_QUERY, { id }),
+    client.fetch(PLAYLIST_BY_SLUG_QUERY, { slug: "editor-picks" }),
   ]);
+
+  // Debugging log to verify the structure of playlistResult
+  console.log("Playlist result:", playlistResult);
+
+  // Safely access the `select` property
+  const editorPosts = playlistResult ? playlistResult.select : null;
 
   if (!post) return notFound();
   const parsedContent = md.render(post?.pitch || "");
@@ -88,7 +91,7 @@ async function Page({ params }: { params: Promise<{ id: string }> }) {
 
         <hr className="divider" />
 
-        {editorPosts?.length > 0 && (
+        {editorPosts && editorPosts.length > 0 ? (
           <div className="max-w-4xl mx-auto">
             <p className="text-30-semibold">Editor Picks</p>
 
@@ -98,6 +101,8 @@ async function Page({ params }: { params: Promise<{ id: string }> }) {
               ))}
             </ul>
           </div>
+        ) : (
+          <p className="text-center">No editor picks available</p>
         )}
       </section>
 
